@@ -43,21 +43,21 @@ Usage
 * You can find a basic example in pyau/example.py
 
 
-The audio unit 'tests' - 'sdfs' could not be foundTracks :
-0: [ DLSMusicDevice ] => [ AUPitch ]
-1: [ DLSMusicDevice ] => [ AUPitch ]
-2: [ DLSMusicDevice ] => [ AUPitch ] => [ AUPitch ]
+    The audio unit 'tests' - 'sdfs' could not be foundTracks :
+    0: [ DLSMusicDevice ] => [ AUPitch ]
+    1: [ DLSMusicDevice ] => [ AUPitch ]
+    2: [ DLSMusicDevice ] => [ AUPitch ] => [ AUPitch ]
 
-DLSMusicDevice by Apple
-Tracks :
-0: [ DLSMusicDevice ] => [ AUPitch ]
-1: [ DLSMusicDevice ] => [ AUPitch ] -- ARMED
-2: [ DLSMusicDevice ] => [ AUPitch ] => [ AUPitch ]
+    DLSMusicDevice by Apple
+    Tracks :
+    0: [ DLSMusicDevice ] => [ AUPitch ]
+    1: [ DLSMusicDevice ] => [ AUPitch ] -- ARMED
+    2: [ DLSMusicDevice ] => [ AUPitch ] => [ AUPitch ]
 
-Some parameters for synth DLSMusicDevice :
-Tuning = 0 Cents
-Volume = 0.0 dB
-Reverb Volume = 0.0 dB
+    Some parameters for synth DLSMusicDevice :
+    Tuning = 0 Cents
+    Volume = 0.0 dB
+    Reverb Volume = 0.0 dB
 
 
 
@@ -71,57 +71,63 @@ TODOs
 
 XCode Sample Project > 
 
+The sample code which can load a host Audio Unit borrows heavily from PlaySequence sample code / but allows you to specify Kontakt Player rather than just dls files. 
+./PlaySequence /yourpath/pyau/Midi/1.mid  -b /yourpath/gitWorkspace/pyau/gls.dls -p -f "/yourpath/pyau/test.wav" lpcm 44100
+
+https://developer.apple.com/library/mac/samplecode/PlaySequence/Listings/main_cpp.html
+
+
 Spit out a list of available 
 
-------- SYNTHS -------
+    ------- SYNTHS -------
 
-tonespace - mucoder
-Kontakt 5 - Native Instruments
-Spectral - LinPlug
-DLSMusicDevice - Apple
-AUMIDISynth - Apple
-AUSampler - Apple
-Omnisphere - Spectrasonics
-Drone - Cognitone
-Nexus - reFX
-sforzando - Plogue Art et Technologie
-Podolski - u-he
-Zebra2 - u-he
-Zebralette - u-he
-Cream - Kirnu
-Vienna Ensemble Pro Event Input - VSL
-Vienna Ensemble Pro Surround - VSL
-Vienna Ensemble Pro - VSL
+    tonespace - mucoder
+    Kontakt 5 - Native Instruments
+    Spectral - LinPlug
+    DLSMusicDevice - Apple
+    AUMIDISynth - Apple
+    AUSampler - Apple
+    Omnisphere - Spectrasonics
+    Drone - Cognitone
+    Nexus - reFX
+    sforzando - Plogue Art et Technologie
+    Podolski - u-he
+    Zebra2 - u-he
+    Zebralette - u-he
+    Cream - Kirnu
+    Vienna Ensemble Pro Event Input - VSL
+    Vienna Ensemble Pro Surround - VSL
+    Vienna Ensemble Pro - VSL
 
-------- EFFECTS -------
+    ------- EFFECTS -------
 
-AUBandpass - Apple
-AUDynamicsProcessor - Apple
-AUDelay - Apple
-AUDistortion - Apple
-AUFilter - Apple
-AUGraphicEQ - Apple
-AUHipass - Apple
-AUHighShelfFilter - Apple
-AUPeakLimiter - Apple
-AULowpass - Apple
-AULowShelfFilter - Apple
-AUMultibandCompressor - Apple
-AUMatrixReverb - Apple
-AUNBandEQ - Apple
-AUNetSend - Apple
-AUParametricEQ - Apple
-AURoundTripAAC - Apple
-AURogerBeep - Apple
-AUSampleDelay - Apple
-AUPitch - Apple
-ArtsAcoustic Reverb - ArtsAcoustic
-Vienna Ensemble Pro Audio Input - VSL
+    AUBandpass - Apple
+    AUDynamicsProcessor - Apple
+    AUDelay - Apple
+    AUDistortion - Apple
+    AUFilter - Apple
+    AUGraphicEQ - Apple
+    AUHipass - Apple
+    AUHighShelfFilter - Apple
+    AUPeakLimiter - Apple
+    AULowpass - Apple
+    AULowShelfFilter - Apple
+    AUMultibandCompressor - Apple
+    AUMatrixReverb - Apple
+    AUNBandEQ - Apple
+    AUNetSend - Apple
+    AUParametricEQ - Apple
+    AURoundTripAAC - Apple
+    AURogerBeep - Apple
+    AUSampleDelay - Apple
+    AUPitch - Apple
+    ArtsAcoustic Reverb - ArtsAcoustic
+    Vienna Ensemble Pro Audio Input - VSL
 
-------- MUSIC EFFECTS -------
+    ------- MUSIC EFFECTS -------
 
-Altiverb 6 - Audio Ease
-Melodyne - Celemony
-Zebrify - u-he
-ZRev - u-he
+    Altiverb 6 - Audio Ease
+    Melodyne - Celemony
+    Zebrify - u-he
+    ZRev - u-he
 

@@ -12,9 +12,26 @@
 #include <iostream>
 #include <iomanip>
 
+
 #include "AHHost.h"
 
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreServices/CoreServices.h>
+#include <CoreAudio/CoreAudioTypes.h>
+#include <AudioToolbox/AudioToolbox.h>
+#include <CoreMIDI/CoreMIDI.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <set>
 
+#include "AUOutputBL.h"
+#include "CAStreamBasicDescription.h"
+
+// file handling utils
+#include "CAAudioFileFormats.h"
+#include "CAFilePathUtils.h"
+#include "CAHostTimeBase.h"
+#include "CAAudioFileFormats.h"
 
 using namespace std;
 
@@ -174,7 +191,7 @@ void AHHost::Stop()
 }
 
 // Most was copy-pasted from PlaySequence example
-void AHHost::BounceToFile( const string& outputFilePath )
+void AHHost::BounceToFile( CFURLRef outputFilePathUrl,OSType dataFormat,AudioFileTypeID destFileType )
 {
     StopListeningToMidi();
     
@@ -196,17 +213,35 @@ void AHHost::BounceToFile( const string& outputFilePath )
     UInt32 numFrames = bufferSize_;
     Float64 srate = sampleRate_;
     
+    
+    
     CAStreamBasicDescription outputFormat;
     outputFormat.mChannelsPerFrame = 2;
     outputFormat.mSampleRate = srate;
-    outputFormat.mFormatID = kAudioFormatLinearPCM;
-    outputFormat.mBytesPerPacket = outputFormat.mChannelsPerFrame * 2;
-    outputFormat.mFramesPerPacket = 1;
-    outputFormat.mBytesPerFrame = outputFormat.mBytesPerPacket;
-    outputFormat.mBitsPerChannel = 16;
-    outputFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
+    outputFormat.mFormatID = dataFormat;
     
-    printf ("Writing to file: %s with format:\n* ", outputFilePath.c_str());
+    
+    if (dataFormat == kAudioFormatLinearPCM) {
+        outputFormat.mBytesPerPacket = outputFormat.mChannelsPerFrame * 2;
+        outputFormat.mFramesPerPacket = 1;
+        outputFormat.mBytesPerFrame = outputFormat.mBytesPerPacket;
+        outputFormat.mBitsPerChannel = 16;
+        
+        if (destFileType == kAudioFileWAVEType)
+            outputFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger
+            | kLinearPCMFormatFlagIsPacked;
+        else
+            outputFormat.mFormatFlags = kLinearPCMFormatFlagIsBigEndian
+            | kLinearPCMFormatFlagIsSignedInteger
+            | kLinearPCMFormatFlagIsPacked;
+    } else {
+        // use AudioFormat API to fill out the rest.
+        size = sizeof(outputFormat);
+        AudioFormatGetProperty(kAudioFormatProperty_FormatInfo, 0, NULL, &size, &outputFormat);
+    }
+    
+    //  printf ("Writing to file: %s with format:\n* ", outputFilePathUrl.to_str());
+    
     outputFormat.Print();
     
     //FileSystemUtils::DeleteFile(outputFilePath); in a flag in ExtAudioFileCreateWithURUL since 10.6
@@ -217,56 +252,64 @@ void AHHost::BounceToFile( const string& outputFilePath )
     //	verify_noerr( PosixPathToParentFSRefAndName(outputFilePath.c_str(), parentDir, destFileName) );
     
     ExtAudioFileRef outfile;
-    CFStringRef path = CFStringCreateWithCString(kCFAllocatorDefault, outputFilePath.c_str(), kCFStringEncodingMacRoman);
-    CFURLRef url = CFURLCreateWithString(NULL, path, NULL);
-    //verify_noerr( ExtAudioFileCreateNew (&parentDir, destFileName, kAudioFileWAVEType, &outputFormat, NULL, &outfile) );
     
-    PrintIfErr( ExtAudioFileCreateWithURL(url, kAudioFileWAVEType, &outputFormat, NULL, kAudioFileFlags_EraseFile, &outfile) );
+    // CFURLRef url = CFURLCreateWithString(NULL, outputFilePath, NULL);
+    //CFStringRef fullPathEscaped = CFURLCreateStringByAddingPercentEscapes(NULL,(CFStringRef)outputFilePath, NULL, NULL,kCFStringEncodingUTF8);
+    // CFURLRef url = CFURLCreateWithString(NULL, fullPathEscaped, NULL);
+    //CFURLRef url; url = CFURLCreateFromFileSystemRepresentation(NULL, (const UInt8*)outputFilePath, strlen(outputFilePath), false);
+    // create output file, delete existing file
     
-    CFRelease (path);
-    
-    AudioUnit outputUnit = graph_.GetOutput()->AU();
-    
-    {
-        CAStreamBasicDescription clientFormat;
-        size = sizeof(clientFormat);
-        PrintIfErr (AudioUnitGetProperty (outputUnit,
-                                          kAudioUnitProperty_StreamFormat,
-                                          kAudioUnitScope_Output, 0,
-                                          &clientFormat, &size) );
-        size = sizeof(clientFormat);
-        PrintIfErr( ExtAudioFileSetProperty(outfile, kExtAudioFileProperty_ClientDataFormat, size, &clientFormat) );
+    PrintIfErr( ExtAudioFileCreateWithURL(outputFilePathUrl, kAudioFileWAVEType, &outputFormat, NULL, kAudioFileFlags_EraseFile, &outfile) );
+    if (outfile == nil) {
+        printf("\nFATAL - output file is nil = something went wrong!!!! aborting. 1718449215 is the decimal representation of the four character code for the kAudioFormatUnsupportedDataFormatError error. ");
+    }else{
+        
+        
+        AudioUnit outputUnit = graph_.GetOutput()->AU();
         
         {
-            MusicTimeStamp currentTime;
-            AUOutputBL outputBuffer (clientFormat, numFrames);
-            AudioTimeStamp tStamp;
-            memset (&tStamp, 0, sizeof(AudioTimeStamp));
-            tStamp.mFlags = kAudioTimeStampSampleTimeValid;
-            //int i = 0;
-            //int numTimesFor10Secs = (int)(10. / (numFrames / srate));
-            MusicTimeStamp sequenceLength = midiPlayer_.GetSequenceLength();
-            midiPlayer_.Start();
-            do {
-                outputBuffer.Prepare();
-                AudioUnitRenderActionFlags actionFlags = 0;
-                PrintIfErr( AudioUnitRender (outputUnit, &actionFlags, &tStamp, 0, numFrames, outputBuffer.ABL()) );
+            CAStreamBasicDescription clientFormat;
+            size = sizeof(clientFormat);
+            PrintIfErr (AudioUnitGetProperty (outputUnit,
+                                              kAudioUnitProperty_StreamFormat,
+                                              kAudioUnitScope_Output, 0,
+                                              &clientFormat, &size) );
+            size = sizeof(clientFormat);
+            PrintIfErr( ExtAudioFileSetProperty(outfile, kExtAudioFileProperty_ClientDataFormat, size, &clientFormat) );
+            
+            {
+                MusicTimeStamp currentTime;
+                AUOutputBL outputBuffer (clientFormat, numFrames);
+                AudioTimeStamp tStamp;
+                memset (&tStamp, 0, sizeof(AudioTimeStamp));
+                tStamp.mFlags = kAudioTimeStampSampleTimeValid;
+                int i = 0;
+                int numTimesFor10Secs = (int)(10. / (numFrames / srate));
+                MusicTimeStamp sequenceLength = midiPlayer_.GetSequenceLength();
+                midiPlayer_.Start();
                 
-                tStamp.mSampleTime += numFrames;
-                
-                PrintIfErr( ExtAudioFileWrite(outfile, numFrames, outputBuffer.ABL()) );
-                
-                midiPlayer_.GetTime(&currentTime);
-                //if (++i % numTimesFor10Secs == 0)
-                //	printf ("current time: %6.2f beats\n", currentTime);
-            } while (currentTime < sequenceLength);
-            midiPlayer_.Stop();
-            Reset();
+                do {
+                    outputBuffer.Prepare();
+                    AudioUnitRenderActionFlags actionFlags = 0;
+                    PrintIfErr( AudioUnitRender (outputUnit, &actionFlags, &tStamp, 0, numFrames, outputBuffer.ABL()) );
+                    
+                    tStamp.mSampleTime += numFrames;
+                    
+                    PrintIfErr( ExtAudioFileWrite(outfile, numFrames, outputBuffer.ABL()) );
+                    
+                    midiPlayer_.GetTime(&currentTime);
+                    //if (++i % numTimesFor10Secs == 0)
+                    printf ("current time: %6.2f beats\n", currentTime);
+                } while (currentTime < sequenceLength);
+                midiPlayer_.Stop();
+                Reset();
+            }
         }
+        
+        // close
+        ExtAudioFileDispose(outfile);
     }
     
-    // close
-    ExtAudioFileDispose(outfile);
     
     // disabling the offline render mode
     value =0;
