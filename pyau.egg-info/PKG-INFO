@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: pyau
+Version: 0.1
+Summary: Python Audio Unit host
+Home-page: UNKNOWN
+Author: Simon Lemieux and Sean Wood
+Author-email: lemieux.simon@gmail.com
+License: UNKNOWN
+Description: Python Audio Unit host
+Platform: UNKNOWN
